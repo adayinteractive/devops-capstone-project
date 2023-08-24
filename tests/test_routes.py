@@ -151,6 +151,23 @@ class TestAccountService(TestCase):
             self.assertEqual(data[i]["phone_number"], account.phone_number)
             self.assertEqual(data[i]["date_joined"], str(account.date_joined))
 
+    def test_list_non_existing_accounts(self):
+        """It should send back an empty list if nothing found."""
+
+        # Send a GET request to list all accounts
+        response = self.client.get('/accounts')
+
+        # Check if the response status code is 200 OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Fetch the list of accounts from the response JSON data
+        account_list = response.get_json()
+
+        # Check if the account list is a list
+        self.assertIsInstance(account_list, list)
+
+        # Check if the account list is empty
+        self.assertEqual(len(account_list), 0)
     
 ######################################################################
 # TEST - READ AN ACCOUNT
@@ -174,7 +191,6 @@ class TestAccountService(TestCase):
         self.assertEqual(data["date_joined"], str(test_account.date_joined))
 
 
-
     #test_account_not_found
     def test_read_account_not_found(self):
         """It should not Read an Account that is not found"""
@@ -182,10 +198,50 @@ class TestAccountService(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
-
 ######################################################################
 # TEST - UPDATE AN EXISTING ACCOUNT
 ######################################################################
+    def test_update_account(self):
+        # Create a test account using _create_accounts
+        test_account = self._create_accounts(1)[0]
+
+        # Define the new data for updating the account
+        new_data = {
+            "name": "Updated Name",
+            "email": "updated@example.com",
+            "address": "Updated Address",
+            "phone_number": "555-555-5555"
+        }
+
+        # Send a PUT request to update the account
+        response = self.client.put(
+            f"{BASE_URL}/{test_account.id}",
+            json=new_data,
+            content_type="application/json"
+        )
+
+        # Check if the response status code is 200 OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Fetch the updated account from the response JSON data
+        updated_account_data = response.get_json()
+
+        # Check if the updated data matches the expected updated data
+        self.assertEqual(updated_account_data["name"], new_data["name"])
+        self.assertEqual(updated_account_data["email"], new_data["email"])
+        self.assertEqual(updated_account_data["address"], new_data["address"])
+        self.assertEqual(updated_account_data["phone_number"], new_data["phone_number"])
+        # Assuming date_joined is not updated
+
+        # Fetch the updated account from the database and verify its data
+        updated_account = Account.find(test_account.id)
+        self.assertEqual(updated_account.name, new_data["name"])
+        self.assertEqual(updated_account.email, new_data["email"])
+        self.assertEqual(updated_account.address, new_data["address"])
+        self.assertEqual(updated_account.phone_number, new_data["phone_number"])
+
+
+
 
     def test_update_nonexistent_account(self):
         account_id = 999  # Assuming this account ID does not exist
@@ -209,3 +265,4 @@ class TestAccountService(TestCase):
     def test_delete_nonexistent_account(self):
         resp = self.client.delete(f'/accounts/999')
         self.assertEqual(resp.status_code, HTTPStatus.NO_CONTENT)
+
