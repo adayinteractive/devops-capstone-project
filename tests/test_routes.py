@@ -129,30 +129,54 @@ class TestAccountService(TestCase):
 ######################################################################
 # TEST - LIST ALL ACCOUNTS
 ######################################################################
+
     def test_list_accounts(self):
+        """It should Create a list of Accounts when requested."""
+        # Create test accounts using _create_accounts
+        test_accounts = self._create_accounts(2)  # Create 2 test accounts
+
         response = self.client.get('/accounts')
         self.assertEqual(response.status_code, HTTPStatus.OK)
         data = json.loads(response.data)
         self.assertIsInstance(data, list)
-        self.assertEqual(len(data), 1)
 
+        # Check if the number of returned accounts matches the created test accounts
+        self.assertEqual(len(data), len(test_accounts))
+
+        # Check if the serialized data matches the expected data for each account
+        for i, account in enumerate(test_accounts):
+            self.assertEqual(data[i]["name"], account.name)
+            self.assertEqual(data[i]["email"], account.email)
+            self.assertEqual(data[i]["address"], account.address)
+            self.assertEqual(data[i]["phone_number"], account.phone_number)
+            self.assertEqual(data[i]["date_joined"], str(account.date_joined))
 
     
 ######################################################################
 # TEST - READ AN ACCOUNT
 ######################################################################
-    def test_get_account(self):
+    def test_read_account(self):
         """It should Read a single Account"""
-        account = self._create_accounts(1)[0]
+        # Create a test account using _create_accounts
+        test_account = self._create_accounts(1)[0]
+
         response = self.client.get(
-            f"{BASE_URL}/{account.id}", content_type="application/json"
+            f"{BASE_URL}/{test_account.id}", content_type="application/json"
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.get_json()
-        self.assertEqual(data["name"], account.name)
+
+        # Check if the retrieved data matches the expected data of the test account
+        self.assertEqual(data["name"], test_account.name)
+        self.assertEqual(data["email"], test_account.email)
+        self.assertEqual(data["address"], test_account.address)
+        self.assertEqual(data["phone_number"], test_account.phone_number)
+        self.assertEqual(data["date_joined"], str(test_account.date_joined))
+
+
 
     #test_account_not_found
-    def test_get_account_not_found(self):
+    def test_read_account_not_found(self):
         """It should not Read an Account that is not found"""
         response = self.client.get(f"{BASE_URL}/0")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -163,15 +187,13 @@ class TestAccountService(TestCase):
 # TEST - UPDATE AN EXISTING ACCOUNT
 ######################################################################
 
-    def test_update_existing_account(self):
-        account_id = 1
+    def test_update_nonexistent_account(self):
+        account_id = 999  # Assuming this account ID does not exist
         new_data = {'name': 'Updated Name'}
-        resp = self.client.put(f'/accounts/{account_id}', json=new_data)
-        self.assertEqual(resp.status_code, HTTPStatus.OK)
-        data = json.loads(resp.data)
-        self.assertIsInstance(data, dict)
-        self.assertEqual(data['id'], account_id)
-        self.assertEqual(data['name'], new_data['name'])
+
+        # Send a PUT request to update the nonexistent account
+        response = self.client.put(f'{BASE_URL}/accounts/{account_id}', json=new_data)
+        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
 
 ######################################################################

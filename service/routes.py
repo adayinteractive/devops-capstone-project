@@ -78,6 +78,8 @@ def list_accounts():
 ######################################################################
 # READ AN ACCOUNT
 ######################################################################
+@app.route("/accounts/<int:account_id>", methods=["GET"])
+
 def read_account(account_id):
     account = Account.find(account_id)
     if not account:
@@ -88,7 +90,7 @@ def read_account(account_id):
 # UPDATE AN EXISTING ACCOUNT
 ######################################################################
 @app.route("/accounts/<int:account_id>", methods=["PUT"])
-def update_account(account_id):
+def update_account(self, account_id):
     """
     Updates an Account
     This endpoint will update an Account based on the account_id and request data.
@@ -100,6 +102,7 @@ def update_account(account_id):
     data = request.get_json()
     account.update(data)
     return jsonify(account.serialize()), HTTPStatus.OK
+
 
 ######################################################################
 # DELETE AN ACCOUNT
