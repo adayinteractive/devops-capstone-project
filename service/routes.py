@@ -1,3 +1,4 @@
+
 """
 Account Service
 
@@ -5,6 +6,7 @@ This microservice handles the lifecycle of Accounts
 """
 # pylint: disable=unused-import
 from flask import jsonify, request, make_response, abort, url_for   # noqa; F401
+from http import HTTPStatus
 from service.models import Account
 from service.common import status  # HTTP Status Codes
 from . import app  # Import Flask application
@@ -61,37 +63,57 @@ def create_accounts():
 # LIST ALL ACCOUNTS
 ######################################################################
 
-# ... place you code here to LIST accounts ...
+@app.route('/accounts', methods=['GET'])
+def list_accounts():
+    """
+    Lists all accounts
+    This endpoint will return a list of all accounts.
+    """
+    accounts = Account.all()
+    serialized_accounts = [acc.serialize() for acc in accounts]
+    return jsonify(serialized_accounts), HTTPStatus.OK
+
 
 
 ######################################################################
 # READ AN ACCOUNT
 ######################################################################
- @app.route("/accounts/<int:account_id>", methods=["GET"])
-    def get_accounts(account_id):
-        """
-        Reads an Account
-        This endpoint will read an Account based the account_id that is requested
-        """
-        app.logger.info("Request to read an Account with id: %s", account_id)
-        account = Account.find(account_id)
-        if not account:
-            abort(status.HTTP_404_NOT_FOUND, f"Account with id [{account_id}] could not be found.")
-        return account.serialize(), status.HTTP_200_OK
+def read_account(account_id):
+    account = Account.find(account_id)
+    if not account:
+        abort(HTTPStatus.NOT_FOUND, f"Account with id [{account_id}] could not be found.")
+    return account.serialize()
 
 ######################################################################
 # UPDATE AN EXISTING ACCOUNT
 ######################################################################
+@app.route("/accounts/<int:account_id>", methods=["PUT"])
+def update_account(account_id):
+    """
+    Updates an Account
+    This endpoint will update an Account based on the account_id and request data.
+    """
+    account = Account.find(account_id)
+    if not account:
+        abort(HTTPStatus.NOT_FOUND, f"Account with id [{account_id}] could not be found.")
 
-# ... place you code here to UPDATE an account ...
-
+    data = request.get_json()
+    account.update(data)
+    return jsonify(account.serialize()), HTTPStatus.OK
 
 ######################################################################
 # DELETE AN ACCOUNT
 ######################################################################
-
-# ... place you code here to DELETE an account ...
-
+@app.route("/accounts/<int:account_id>", methods=["DELETE"])
+def delete_account(account_id):
+    """
+    Deletes an Account
+    This endpoint will delete an Account based on the account_id.
+    """
+    account = Account.find(account_id)
+    if account:
+        account.delete()
+    return "", HTTPStatus.NO_CONTENT
 
 ######################################################################
 #  U T I L I T Y   F U N C T I O N S

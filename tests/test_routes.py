@@ -8,6 +8,9 @@ Test cases can be run with the following:
 import os
 import logging
 from unittest import TestCase
+from http import HTTPStatus
+from flask import json
+
 from tests.factories import AccountFactory
 from service.common import status  # HTTP Status Codes
 from service.models import db, Account, init_db
@@ -123,20 +126,64 @@ class TestAccountService(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
 
-    # ADD YOUR TEST CASES HERE ...
-    # test_read_an_account
+######################################################################
+# TEST - LIST ALL ACCOUNTS
+######################################################################
+    def test_list_accounts(self):
+        response = self.client.get('/accounts')
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        data = json.loads(response.data)
+        self.assertIsInstance(data, list)
+        self.assertEqual(len(data), 1)
+
+
+    
+######################################################################
+# TEST - READ AN ACCOUNT
+######################################################################
     def test_get_account(self):
         """It should Read a single Account"""
         account = self._create_accounts(1)[0]
-        resp = self.client.get(
+        response = self.client.get(
             f"{BASE_URL}/{account.id}", content_type="application/json"
         )
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        data = resp.get_json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.get_json()
         self.assertEqual(data["name"], account.name)
 
     #test_account_not_found
     def test_get_account_not_found(self):
         """It should not Read an Account that is not found"""
-        resp = self.client.get(f"{BASE_URL}/0")
-        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        response = self.client.get(f"{BASE_URL}/0")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+
+######################################################################
+# TEST - UPDATE AN EXISTING ACCOUNT
+######################################################################
+
+    def test_update_existing_account(self):
+        account_id = 1
+        new_data = {'name': 'Updated Name'}
+        resp = self.client.put(f'/accounts/{account_id}', json=new_data)
+        self.assertEqual(resp.status_code, HTTPStatus.OK)
+        data = json.loads(resp.data)
+        self.assertIsInstance(data, dict)
+        self.assertEqual(data['id'], account_id)
+        self.assertEqual(data['name'], new_data['name'])
+
+
+######################################################################
+# TEST - DELETE AN ACCOUNT
+######################################################################
+
+    def test_delete_existing_account(self):
+        account_id = 1
+        resp = self.client.delete(f'/accounts/{account_id}')
+        self.assertEqual(resp.status_code, HTTPStatus.NO_CONTENT)
+        #self.assert_called_once()
+
+    def test_delete_nonexistent_account(self):
+        resp = self.client.delete(f'/accounts/999')
+        self.assertEqual(resp.status_code, HTTPStatus.NO_CONTENT)
