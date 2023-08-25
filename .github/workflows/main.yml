@@ -31,7 +31,7 @@ jobs:
       - name: Set up Python
         run: |
           python -m venv venv
-          source venv/bin/activate
+          . venv/bin/activate  # Corrected the virtual environment activation command
           pip install --upgrade pip
 
       - name: Install Dependencies
