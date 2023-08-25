@@ -40,4 +40,4 @@ jobs:
 
       - name: Run Tests
         run: |
-          python ../tests/test_routes.py
+          python tests/test_routes.py
