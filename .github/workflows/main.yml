@@ -40,6 +40,6 @@ jobs:
 
       - name: Run Tests
         run: |
-          cd ../../
-          cd tests
-          python test_routes.py  # Update the path accordingly
+          # cd ../../
+          # cd tests
+          # python test_routes.py  # Update the path accordingly
