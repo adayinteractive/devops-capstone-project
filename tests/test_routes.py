@@ -10,6 +10,7 @@ import logging
 from unittest import TestCase
 from http import HTTPStatus
 from flask import json
+from service import talisman
 
 from tests.factories import AccountFactory
 from service.common import status  # HTTP Status Codes
@@ -38,6 +39,7 @@ class TestAccountService(TestCase):
         app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
         app.logger.setLevel(logging.CRITICAL)
         init_db(app)
+        talisman.force_https = False
 
     @classmethod
     def tearDownClass(cls):
