@@ -1,38 +1,104 @@
-#
-# This pipeline needs the following tasks from Tekton Hub
-#   - git-clone
-#   - flake8
-#
+# This pipeline automates a Continuous Delivery process using Tekton tasks.
+# It includes steps for cleaning up, cloning a Git repository, linting, running tests,
+# building an image, and deploying to OpenShift.
+# Make sure to replace placeholders with actual values before using.
+
 ---
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
-metadata:  
+metadata:
   name: cd-pipeline
 spec:
+  # Define a workspace for the pipeline tasks to share files.
   workspaces:
     - name: pipeline-workspace
+  # Define parameters that can be customized when triggering the pipeline.
   params:
     - name: repo-url
     - name: branch
       default: main
+    - name: build-image
+  # Define the sequence of tasks in the pipeline.
   tasks:
     - name: init
+      # Use the source workspace for this task.
       workspaces:
         - name: source
-          workspace: pipeline-workspace          
+          workspace: pipeline-workspace
       taskRef:
-        name: cleanup
+        name: cleanup  # Define the task for cleaning up (task definition not shown).
 
     - name: clone
       workspaces:
         - name: output
-          workspace: pipeline-workspace          
+          workspace: pipeline-workspace
       taskRef:
-        name: git-clone
+        name: git-clone  # Use the git-clone task from Tekton Hub.
       params:
-      - name: url
-        value: $(params.repo-url)
-      - name: revision
-        value: $(params.branch)
+        - name: url
+          value: $(params.repo-url)
+        - name: revision
+          value: $(params.branch)
       runAfter:
-        - init
+        - init  # Run this task after the init task completes.
+
+    - name: lint
+      workspaces:
+        - name: source
+          workspace: pipeline-workspace
+      taskRef:
+        name: flake8  # Use the flake8 task from Tekton Hub.
+      params:
+        - name: image
+          value: "python:3.9-slim"
+        - name: args
+          value: ["--count", "--max-complexity=10", "--max-line-length=127", "--statistics"]
+      runAfter:
+        - clone  # Run this task after the clone task completes.
+
+    - name: tests
+      workspaces:
+        - name: source
+          workspace: pipeline-workspace
+      taskRef:
+        name: nose  # Use the nose task from Tekton Hub.
+      params:
+        - name: database_uri
+          value: "sqlite:///test.db"
+        - name: args
+          value: "-v --with-spec --spec-color"
+      runAfter:
+        - clone  # Run this task after the clone task completes.
+
+    - name: build
+      workspaces:
+        - name: source
+          workspace: pipeline-workspace
+      taskRef:
+        name: buildah  # Use the buildah task from Tekton Hub.
+        kind: ClusterTask
+      params:
+        - name: IMAGE
+          value: "$(params.build-image)"
+      runAfter:
+        - tests  # Run this task after the tests task completes.
+        - lint   # Also run this task after the lint task completes.
+
+    - name: deploy
+      workspaces:
+        - name: manifest-dir
+          workspace: pipeline-workspace
+      taskRef:
+        name: openshift-client  # Use the openshift-client task from Tekton Hub.
+        kind: ClusterTask
+      params:
+        - name: SCRIPT
+          value: |
+            echo "Updating manifest..."
+            sed -i "s|IMAGE_NAME_HERE|$(params.build-image)|g" deploy/deployment.yaml
+            cat deploy/deployment.yaml
+            echo "Deploying to OpenShift..."
+            oc apply -f deploy/
+            oc get pods -l app=accounts
+      runAfter:
+        - build  # Run this task after the build task completes.
